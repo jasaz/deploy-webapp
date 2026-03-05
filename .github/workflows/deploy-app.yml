@@ -50,17 +50,17 @@ jobs:
                        ./app
 
       - name: Scan Image with Trivy
-        uses: aquasecurity/trivy-action@v0.34.2  # v0.34.2
+        uses: aquasecurity/trivy-action@97e0b3872f55f89b95b2f65b3dbab56962816478
         env:
           TRIVY_LICENSE_FORBIDDEN: 'AGPL-3.0,GPL-3.0'
-          TRIVY_LICENSE_RESTRICTED: 'GPL-2.0,LGPL-2.1'
+          TRIVY_LICENSE_RESTRICTED: 'GPL-2.0,LGPL-2.1'  
         with:
           image-ref: '${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.AR_REPO }}/${{ env.IMAGE_NAME }}:${{ github.sha }}'
           scanners: 'vuln,license'
           format: 'table'
           exit-code: '1'
           severity: 'HIGH,CRITICAL'
-          version: 'v0.69.3'
+          version: 'v0.69.2'
 
       - name: Push Docker Image
         run: |
