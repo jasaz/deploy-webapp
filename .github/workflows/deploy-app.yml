@@ -1,19 +1,19 @@
 name: "Build and Deploy to GKE"
 
 on:
-  workflow_dispatch
-  # push:
-  #   branches:
-  #     - main
-  #   paths:
-  #     - 'app/**'
-  #     - 'k8s/**'
+  # workflow_dispatch
+  push:
+    branches:
+      - main
+    paths:
+      - 'app/**'
+      - 'k8s/**'
 
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
   REGION: us-central1
   CLUSTER_NAME: my-autopilot-cluster
-  AR_REPO: web-app
+  AR_REPO: wiz-gar-repo
   IMAGE_NAME: flask-app
   SA_NAME: gke-deployer
   MONGO_APP_PASS: ${{ secrets.MONGO_APP_PASS }}
