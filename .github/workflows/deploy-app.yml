@@ -8,6 +8,12 @@ on:
     paths:
       - 'app/**'
       - 'k8s/**'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'app/**'
+      - 'k8s/**'
 
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
@@ -63,11 +69,13 @@ jobs:
           version: 'v0.69.2'
 
       - name: Push Docker Image
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         run: |
           docker push ${REGION}-docker.pkg.dev/${PROJECT_ID}/${AR_REPO}/${IMAGE_NAME}:${GITHUB_SHA}
           docker push ${REGION}-docker.pkg.dev/${PROJECT_ID}/${AR_REPO}/${IMAGE_NAME}:latest
 
       - name: Get Image Digest
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         id: digest
         run: |
           DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' \
@@ -76,17 +84,20 @@ jobs:
           echo "Deploying image: ${DIGEST}"
 
       - name: Get GKE Credentials
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         uses: google-github-actions/get-gke-credentials@v2
         with:
           cluster_name: ${{ env.CLUSTER_NAME }}
           location: ${{ env.REGION }}
 
       - name: Deploy to GKE
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         run: |
           # Update image in deployment manifest using immutable digest
           sed -i "s|IMAGE_PLACEHOLDER|${{ steps.digest.outputs.image }}|g" k8s/deployment.yaml
 
           # Update MONGO_URI in deployment manifest with credentials
+          
           sed -i "s|MONGO_URI_PLACEHOLDER|mongodb://flaskapp:${MONGO_APP_PASS}@10.3.0.10:27017/flaskdb|g" k8s/deployment.yaml
 
           kubectl apply -f k8s/namespace.yaml
