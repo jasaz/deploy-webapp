@@ -8,12 +8,14 @@ on:
     paths:
       - 'app/**'
       - 'k8s/**'
+      - '.github/workflows/**'
   pull_request:
     branches:
       - main
     paths:
       - 'app/**'
       - 'k8s/**'
+      - '.github/workflows/**'
 
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
