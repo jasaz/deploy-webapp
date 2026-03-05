@@ -1,0 +1,99 @@
+name: "Build and Deploy to GKE"
+
+on:
+  workflow_dispatch
+  # push:
+  #   branches:
+  #     - main
+  #   paths:
+  #     - 'app/**'
+  #     - 'k8s/**'
+
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  REGION: us-central1
+  CLUSTER_NAME: my-autopilot-cluster
+  AR_REPO: web-app
+  IMAGE_NAME: flask-app
+  SA_NAME: gke-deployer
+  MONGO_APP_PASS: ${{ secrets.MONGO_APP_PASS }}
+
+jobs:
+  build-and-deploy:
+    name: "Build & Deploy"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: '${{ secrets.WIF_PROVIDER }}'
+          service_account: '${{ env.SA_NAME }}@${{ secrets.GCP_PROJECT_ID }}.iam.gserviceaccount.com'
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker ${REGION}-docker.pkg.dev --quiet
+
+      - name: Build Docker Image
+        run: |
+          docker build -t ${REGION}-docker.pkg.dev/${PROJECT_ID}/${AR_REPO}/${IMAGE_NAME}:${GITHUB_SHA} \
+                       -t ${REGION}-docker.pkg.dev/${PROJECT_ID}/${AR_REPO}/${IMAGE_NAME}:latest \
+                       ./app
+
+      - name: Scan Image with Trivy
+        uses: aquasecurity/trivy-action@v0.34.2  # v0.34.2
+        env:
+          TRIVY_LICENSE_FORBIDDEN: 'AGPL-3.0,GPL-3.0'
+          TRIVY_LICENSE_RESTRICTED: 'GPL-2.0,LGPL-2.1'
+        with:
+          image-ref: '${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.AR_REPO }}/${{ env.IMAGE_NAME }}:${{ github.sha }}'
+          scanners: 'vuln,license'
+          format: 'table'
+          exit-code: '1'
+          severity: 'HIGH,CRITICAL'
+          version: 'v0.69.3'
+
+      - name: Push Docker Image
+        run: |
+          docker push ${REGION}-docker.pkg.dev/${PROJECT_ID}/${AR_REPO}/${IMAGE_NAME}:${GITHUB_SHA}
+          docker push ${REGION}-docker.pkg.dev/${PROJECT_ID}/${AR_REPO}/${IMAGE_NAME}:latest
+
+      - name: Get Image Digest
+        id: digest
+        run: |
+          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' \
+            ${REGION}-docker.pkg.dev/${PROJECT_ID}/${AR_REPO}/${IMAGE_NAME}:${GITHUB_SHA})
+          echo "image=${DIGEST}" >> $GITHUB_OUTPUT
+          echo "Deploying image: ${DIGEST}"
+
+      - name: Get GKE Credentials
+        uses: google-github-actions/get-gke-credentials@v2
+        with:
+          cluster_name: ${{ env.CLUSTER_NAME }}
+          location: ${{ env.REGION }}
+
+      - name: Deploy to GKE
+        run: |
+          # Update image in deployment manifest using immutable digest
+          sed -i "s|IMAGE_PLACEHOLDER|${{ steps.digest.outputs.image }}|g" k8s/deployment.yaml
+
+          # Update MONGO_URI in deployment manifest with credentials
+          sed -i "s|MONGO_URI_PLACEHOLDER|mongodb://flaskapp:${MONGO_APP_PASS}@10.3.0.10:27017/flaskdb|g" k8s/deployment.yaml
+
+          kubectl apply -f k8s/namespace.yaml
+          kubectl apply -f k8s/rbac.yaml
+          kubectl apply -f k8s/deployment.yaml
+          kubectl apply -f k8s/service.yaml
+          kubectl apply -f k8s/ingress.yaml
+
+          # Wait for rollout
+          kubectl rollout status deployment/flask-app-deploy -n web-app --timeout=300s
