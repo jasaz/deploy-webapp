@@ -20,7 +20,7 @@ on:
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
   REGION: australia-southeast1
-  CLUSTER_NAME: my-autopilot-cluster
+  CLUSTER_NAME: wiz-autopilot-cluster
   AR_REPO: wiz-gar-repo
   IMAGE_NAME: flask-app
   SA_NAME: gke-deployer
