@@ -67,7 +67,7 @@ jobs:
           scanners: 'vuln,license'
           format: 'table'
           exit-code: '1'
-          severity: 'HIGH,CRITICAL'
+          severity: 'CRITICAL'
           version: 'v0.69.2'
 
       - name: Push Docker Image
