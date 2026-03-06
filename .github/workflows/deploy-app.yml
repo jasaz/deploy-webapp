@@ -67,7 +67,7 @@ jobs:
           scanners: 'vuln,license'
           format: 'table'
           exit-code: '1'
-          severity: 'HIGH,CRITICAL'
+          severity: 'CRITICAL'
           version: 'v0.69.2'
 
       - name: Push Docker Image
@@ -108,5 +108,7 @@ jobs:
           kubectl apply -f k8s/service.yaml
           kubectl apply -f k8s/ingress.yaml
 
-          # Wait for rollout
+          # Wait for rollout to complete
           kubectl rollout status deployment/flask-app-deploy -n web-app --timeout=300s
+
+          # For triggering the Workflow

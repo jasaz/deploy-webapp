@@ -5,7 +5,7 @@ FROM docker.io/jasaz/wolfi-python:wolfi-python3-12-pip as build-stage
 WORKDIR /app
 COPY *.py .
 COPY requirements.txt .
-COPY aquasec.txt .
+COPY wizexercise.txt .
 
 RUN python3 -m pip install --user --no-cache-dir -r requirements.txt
 
