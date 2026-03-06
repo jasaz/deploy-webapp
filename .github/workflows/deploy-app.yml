@@ -110,3 +110,5 @@ jobs:
 
           # Wait for rollout to complete
           kubectl rollout status deployment/flask-app-deploy -n web-app --timeout=300s
+
+          # For triggering the Workflow
