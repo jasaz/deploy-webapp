@@ -74,7 +74,7 @@ jobs:
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         run: |
           docker push ${REGION}-docker.pkg.dev/${PROJECT_ID}/${AR_REPO}/${IMAGE_NAME}:${GITHUB_SHA}
-          docker push ${REGION}-docker.pkg.dev/${PROJECT_ID}/${AR_REPO}/${IMAGE_NAME}:latest
+          # docker push ${REGION}-docker.pkg.dev/${PROJECT_ID}/${AR_REPO}/${IMAGE_NAME}:latest
 
       - name: Get Image Digest
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
@@ -98,13 +98,13 @@ jobs:
           # Update image in deployment manifest using immutable digest
           sed -i "s|IMAGE_PLACEHOLDER|${{ steps.digest.outputs.image }}|g" k8s/deployment.yaml
 
-          # Update MONGO_URI in deployment manifest with credentials
-          ENCODED_PASS=$(python3 -c "import urllib.parse; print(urllib.parse.quote_plus('${MONGO_APP_PASS}'))")
-          echo "::add-mask::${ENCODED_PASS}"
-          sed -i "s|MONGO_URI_PLACEHOLDER|mongodb://flaskapp:${ENCODED_PASS}@10.3.0.10:27017/flaskdb|g" k8s/deployment.yaml
+          # Update MONGO_URI in secret manifest with credentials
+          sed -i "s|MONGO_URI_PLACEHOLDER|mongodb://flaskapp:${MONGO_APP_PASS}@10.3.0.10:27017/flaskdb|g" k8s/secret.yaml
 
           kubectl apply -f k8s/namespace.yaml
           kubectl apply -f k8s/rbac.yaml
+          kubectl apply -f k8s/secret.yaml
+          kubectl apply -f k8s/networkpolicy.yaml
           kubectl apply -f k8s/deployment.yaml
           kubectl apply -f k8s/service.yaml
           kubectl apply -f k8s/ingress.yaml
