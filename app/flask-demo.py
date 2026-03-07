@@ -18,18 +18,24 @@ def health():
 
 @app.route("/data", methods=["GET"])
 def get_data():
-    items = list(collection.find({}, {"_id": 0}))
-    return jsonify(items)
+    try:
+        items = list(collection.find({}, {"_id": 0}))
+        return jsonify(items)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route("/data", methods=["POST"])
 def post_data():
-    data = request.get_json()
-    if not data:
-        return jsonify({"error": "No data provided"}), 400
-    collection.insert_one(data)
-    data.pop("_id", None)
-    return jsonify({"message": "Item added", "item": data}), 201
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
+        collection.insert_one(data)
+        data.pop("_id", None)
+        return jsonify({"message": "Item added", "item": data}), 201
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 if __name__ == "__main__":

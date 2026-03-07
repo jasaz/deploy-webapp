@@ -23,7 +23,13 @@ spec:
             - containerPort: 5000
           env:
             - name: MONGO_URI
-              value: "MONGO_URI_PLACEHOLDER"
+              valueFrom:
+                secretKeyRef:
+                  name: flask-app-secret
+                  key: MONGO_URI
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsUser: 1000
           resources:
             requests:
               cpu: "250m"
