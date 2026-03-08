@@ -71,13 +71,13 @@ jobs:
           version: 'v0.69.2'
 
       - name: Push Docker Image
-        # if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         run: |
           docker push ${REGION}-docker.pkg.dev/${PROJECT_ID}/${AR_REPO}/${IMAGE_NAME}:${GITHUB_SHA}
           # docker push ${REGION}-docker.pkg.dev/${PROJECT_ID}/${AR_REPO}/${IMAGE_NAME}:latest
 
       - name: Get Image Digest
-        # if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         id: digest
         run: |
           IMAGE_TAG="${REGION}-docker.pkg.dev/${PROJECT_ID}/${AR_REPO}/${IMAGE_NAME}:${GITHUB_SHA}"
@@ -93,14 +93,17 @@ jobs:
 
       # ── Supply Chain Security: Cosign Image Signing ──
       - name: Install Cosign
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         uses: sigstore/cosign-installer@v3
 
       - name: Sign Image (Keyless)
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         run: |
           echo "Signing: ${{ steps.digest.outputs.image }}"
           cosign sign --yes "${{ steps.digest.outputs.image }}"
 
       - name: Verify Image Signature
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         run: |
           cosign verify \
             --certificate-identity-regexp="https://github.com/jasaz/deploy-webapp/.*" \
@@ -128,6 +131,16 @@ jobs:
           kubectl apply -f k8s/rbac.yaml
           kubectl apply -f k8s/secret.yaml
           kubectl apply -f k8s/networkpolicy.yaml
+
+          # Install Kyverno (idempotent — skips if already installed)
+          kubectl apply -f https://github.com/kyverno/kyverno/releases/latest/download/install.yaml
+          # Wait for Kyverno admission controller to be ready before applying policies
+          kubectl wait --for=condition=ready pod -l app.kubernetes.io/component=admission-controller -n kyverno --timeout=120s
+
+          # Apply Cosign signature verification policy
+          kubectl apply -f k8s/kyverno-policy.yaml
+
+          # Deploy application (Kyverno validates the image signature)
           kubectl apply -f k8s/deployment.yaml
           kubectl apply -f k8s/service.yaml
           kubectl apply -f k8s/ingress.yaml
