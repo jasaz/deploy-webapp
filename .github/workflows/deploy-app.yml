@@ -99,7 +99,8 @@ jobs:
           sed -i "s|IMAGE_PLACEHOLDER|${{ steps.digest.outputs.image }}|g" k8s/deployment.yaml
 
           # Update MONGO_URI in secret manifest with credentials
-          sed -i "s|MONGO_URI_PLACEHOLDER|mongodb://flaskapp:${MONGO_APP_PASS}@10.3.0.10:27017/flaskdb|g" k8s/secret.yaml
+          ENCODED_PASS=$(python3 -c "import urllib.parse; print(urllib.parse.quote_plus('${MONGO_APP_PASS}'))")
+          sed -i "s|MONGO_URI_PLACEHOLDER|mongodb://flaskapp:${ENCODED_PASS}@10.3.0.10:27017/flaskdb|g" k8s/secret.yaml
 
           kubectl apply -f k8s/namespace.yaml
           kubectl apply -f k8s/rbac.yaml
