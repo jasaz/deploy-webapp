@@ -71,18 +71,19 @@ jobs:
           version: 'v0.69.2'
 
       - name: Push Docker Image
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        # if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         run: |
           docker push ${REGION}-docker.pkg.dev/${PROJECT_ID}/${AR_REPO}/${IMAGE_NAME}:${GITHUB_SHA}
           # docker push ${REGION}-docker.pkg.dev/${PROJECT_ID}/${AR_REPO}/${IMAGE_NAME}:latest
 
       - name: Get Image Digest
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        # if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         id: digest
         run: |
-          FULL_REF=$(docker inspect --format='{{index .RepoDigests 0}}' \
-            ${REGION}-docker.pkg.dev/${PROJECT_ID}/${AR_REPO}/${IMAGE_NAME}:${GITHUB_SHA})
+          IMAGE_TAG="${REGION}-docker.pkg.dev/${PROJECT_ID}/${AR_REPO}/${IMAGE_NAME}:${GITHUB_SHA}"
+          FULL_REF=$(docker image inspect "${IMAGE_TAG}" --format json | jq -r '.[0].RepoDigests[0]')
           echo "image=${FULL_REF}" >> $GITHUB_OUTPUT
+          echo "Deploying image: ${FULL_REF}"
 
           # Without Cosign
           # DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' \
