@@ -83,10 +83,6 @@ jobs:
           FULL_REF=$(docker inspect --format='{{index .RepoDigests 0}}' \
             ${REGION}-docker.pkg.dev/${PROJECT_ID}/${AR_REPO}/${IMAGE_NAME}:${GITHUB_SHA})
           echo "image=${FULL_REF}" >> $GITHUB_OUTPUT
-          # Extract just the sha256 digest for Cosign
-          IMAGE_DIGEST=$(echo ${FULL_REF} | cut -d'@' -f2)
-          echo "image_digest=${IMAGE_DIGEST}" >> $GITHUB_OUTPUT
-          echo "Deploying image: ${FULL_REF}"  
 
           # Without Cosign
           # DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' \
@@ -100,17 +96,15 @@ jobs:
 
       - name: Sign Image (Keyless)
         run: |
-          IMAGE_REF="${REGION}-docker.pkg.dev/${PROJECT_ID}/${AR_REPO}/${IMAGE_NAME}@${{ steps.digest.outputs.image_digest }}"
-          echo "Signing: ${IMAGE_REF}"
-          cosign sign --yes "${IMAGE_REF}"
+          echo "Signing: ${{ steps.digest.outputs.image }}"
+          cosign sign --yes "${{ steps.digest.outputs.image }}"
 
       - name: Verify Image Signature
         run: |
-          IMAGE_REF="${REGION}-docker.pkg.dev/${PROJECT_ID}/${AR_REPO}/${IMAGE_NAME}@${{ steps.digest.outputs.image_digest }}"
           cosign verify \
             --certificate-identity-regexp="https://github.com/jasaz/web-app/.*" \
             --certificate-oidc-issuer="https://token.actions.githubusercontent.com" \
-            "${IMAGE_REF}"
+            "${{ steps.digest.outputs.image }}"
 
       - name: Get GKE Credentials
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
