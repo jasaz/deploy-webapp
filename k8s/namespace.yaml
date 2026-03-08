@@ -4,3 +4,10 @@ metadata:
   name: web-app
   labels:
     name: web-app
+    # Phase 1: Warn only (safe to deploy immediately)
+    pod-security.kubernetes.io/enforce: baseline
+    pod-security.kubernetes.io/warn: restricted
+    # Phase 2: Full enforcement (based on Phase1 results)
+    # pod-security.kubernetes.io/enforce: restricted
+    # pod-security.kubernetes.io/audit: restricted
+    # pod-security.kubernetes.io/warn: restricted
