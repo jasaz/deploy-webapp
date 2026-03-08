@@ -1,6 +1,6 @@
 #################################### build-stage ########################################
 
-FROM docker.io/jasaz/wolfi-python:wolfi-python3-12-pip as build-stage
+FROM docker.io/jasaz/wolfi-python:wolfi-python3-14-pip as build-stage
 
 WORKDIR /app
 COPY *.py .
@@ -12,7 +12,7 @@ RUN python3 -m venv /app/venv && \
 
 #################################### final-stage ########################################
 
-FROM docker.io/jasaz/wolfi-python:wolfi-python3-12 as final-stage
+FROM docker.io/jasaz/wolfi-python:wolfi-python3-14 as final-stage
 
 WORKDIR /app
 
