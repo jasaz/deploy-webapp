@@ -103,7 +103,7 @@ jobs:
       - name: Verify Image Signature
         run: |
           cosign verify \
-            --certificate-identity-regexp="https://github.com/jasaz/web-app/.*" \
+            --certificate-identity-regexp="https://github.com/jasaz/deploy-webapp/.*" \
             --certificate-oidc-issuer="https://token.actions.githubusercontent.com" \
             "${{ steps.digest.outputs.image }}"
 
