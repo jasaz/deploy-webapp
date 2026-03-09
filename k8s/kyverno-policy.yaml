@@ -1,4 +1,3 @@
-# Applies only to namespace web-app
 apiVersion: kyverno.io/v1
 kind: ClusterPolicy
 metadata:
@@ -9,6 +8,24 @@ spec:
   background: false
   webhookTimeoutSeconds: 30
   rules:
+    # Rule 1: Only allow images from our Artifact Registry
+    - name: restrict-image-source
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+              namespaces:
+                - web-app
+                - demo
+      validate:
+        message: "Only images from australia-southeast1-docker.pkg.dev are allowed in this namespace."
+        pattern:
+          spec:
+            containers:
+              - image: "australia-southeast1-docker.pkg.dev/*"
+
+    # Rule 2: Verify Cosign keyless signature on AR images
     - name: verify-image-signature
       match:
         any:
@@ -20,7 +37,7 @@ spec:
                 - demo
       verifyImages:
         - imageReferences:
-            - "australia-southeast1-docker.pkg.dev/*/wiz-gar-repo/*"
+            - "*"
           attestors:
             - entries:
                 - keyless:
