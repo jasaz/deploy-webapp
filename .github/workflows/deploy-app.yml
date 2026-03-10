@@ -9,6 +9,7 @@ on:
       - 'app/**'
       - 'k8s/**'
       - '.github/workflows/**'
+      - '!README.md'
   pull_request:
     branches:
       - main
@@ -16,6 +17,7 @@ on:
       - 'app/**'
       - 'k8s/**'
       - '.github/workflows/**'
+      - '!README.md'
 
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
@@ -51,6 +53,18 @@ jobs:
       - name: Configure Docker for Artifact Registry
         run: gcloud auth configure-docker ${REGION}-docker.pkg.dev --quiet
 
+      # ── Supply Chain: Scan source deps + K8s misconfigs ──
+      - name: Scan Source & K8s Manifests (Trivy FS)
+        uses: aquasecurity/trivy-action@97e0b3872f55f89b95b2f65b3dbab56962816478
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          scanners: 'vuln,license,misconfig'
+          format: 'table'
+          exit-code: '1'
+          severity: 'CRITICAL'
+          version: 'v0.69.2'
+
       - name: Build Docker Image
         run: |
           docker build --no-cache -t ${REGION}-docker.pkg.dev/${PROJECT_ID}/${AR_REPO}/${IMAGE_NAME}:${GITHUB_SHA} \
@@ -69,6 +83,22 @@ jobs:
           exit-code: '1'
           severity: 'CRITICAL'
           version: 'v0.69.2'
+
+            # ── Supply Chain: Generate SBOM ──
+      - name: Generate SBOM (CycloneDX)
+        uses: aquasecurity/trivy-action@97e0b3872f55f89b95b2f65b3dbab56962816478
+        with:
+          image-ref: '${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.AR_REPO }}/${{ env.IMAGE_NAME }}:${{ github.sha }}'
+          format: 'cyclonedx'
+          output: 'sbom.cdx.json'
+          version: 'v0.69.2'
+
+      - name: Upload SBOM as Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-${{ github.sha }}
+          path: sbom.cdx.json
+          retention-days: 90
 
       - name: Push Docker Image
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
