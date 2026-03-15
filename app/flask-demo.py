@@ -1,13 +1,23 @@
 from flask import Flask, request, jsonify
 from pymongo import MongoClient
+from urllib.parse import quote_plus
 import os
 
 app = Flask(__name__)
 
-# MongoDB connection via environment variable
-MONGO_URI = os.environ.get("MONGO_URI", "mongodb://localhost:27017/flaskdb")
+# MongoDB connection built from individual env vars to handle special characters
+MONGO_USER = os.environ.get("MONGO_USER", "flaskapp")
+MONGO_PASS = os.environ.get("MONGO_PASS", "")
+MONGO_HOST = os.environ.get("MONGO_HOST", "localhost:27017")
+MONGO_DB = os.environ.get("MONGO_DB", "flaskdb")
+
+if MONGO_PASS:
+    MONGO_URI = f"mongodb://{quote_plus(MONGO_USER)}:{quote_plus(MONGO_PASS)}@{MONGO_HOST}/{MONGO_DB}"
+else:
+    MONGO_URI = f"mongodb://{MONGO_HOST}/{MONGO_DB}"
+
 client = MongoClient(MONGO_URI)
-db = client.get_default_database()
+db = client[MONGO_DB]
 collection = db["items"]
 
 
