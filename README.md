@@ -55,7 +55,7 @@ kubectl rollout status deployment kyverno-admission-controller -n kyverno --time
 helm repo add external-secrets https://charts.external-secrets.io --force-update
 helm upgrade --install external-secrets external-secrets/external-secrets \
   -n external-secrets --create-namespace --wait --timeout 120s \
-  --set serviceAccount.annotations."iam\.gke\.io/gcp-service-account"="eso-gsa@<PROJECT_ID>.iam.gserviceaccount.com"
+  --set serviceAccount.annotations."iam\.gke\.io/gcp-service-account"="eso-gsa@${PROJECT_ID}.iam.gserviceaccount.com"
 ```
 
 ### Create GCP service account for ESO
