@@ -26,7 +26,7 @@ env:
   AR_REPO: wiz-gar-repo
   IMAGE_NAME: flask-app
   SA_NAME: gke-deployer
-  MONGO_APP_PASS: ${{ secrets.MONGO_APP_PASS }}
+
 
 jobs:
   build-and-deploy:
@@ -90,6 +90,7 @@ jobs:
         with:
           image-ref: '${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.AR_REPO }}/${{ env.IMAGE_NAME }}:${{ github.sha }}'
           format: 'cyclonedx'
+          scanners: 'vuln' # Required to include vulnerabilities in CycloneDX
           output: 'sbom.cdx.json'
           version: 'v0.69.2'
 
@@ -153,19 +154,14 @@ jobs:
           # Update image in deployment manifest using immutable digest
           sed -i "s|IMAGE_PLACEHOLDER|${{ steps.digest.outputs.image }}|g" k8s/deployment.yaml
 
-          # Update MONGO_URI in secret manifest with credentials
-          ENCODED_PASS=$(python3 -c "import urllib.parse; print(urllib.parse.quote_plus('${MONGO_APP_PASS}'))")
-          sed -i "s|MONGO_URI_PLACEHOLDER|mongodb://flaskapp:${ENCODED_PASS}@10.3.0.10:27017/flaskdb|g" k8s/secret.yaml
+          # Replace project ID placeholder in SecretStore manifest
+          sed -i "s|PROJECT_ID_PLACEHOLDER|${PROJECT_ID}|g" k8s/secret-store.yaml
 
           kubectl apply -f k8s/namespace.yaml
           kubectl apply -f k8s/rbac.yaml
-          kubectl apply -f k8s/secret.yaml
+          kubectl apply -f k8s/secret-store.yaml
+          kubectl apply -f k8s/external-secret.yaml
           kubectl apply -f k8s/networkpolicy.yaml
-
-          # Install Kyverno (idempotent — skips if already installed)
-          # helm repo add kyverno https://kyverno.github.io/kyverno/ --force-update
-          # Wait for Kyverno admission controller to be ready before applying policies
-          # helm upgrade --install kyverno kyverno/kyverno -n kyverno --create-namespace --wait --timeout 120s
 
           # Apply Cosign signature verification policy
           kubectl apply -f k8s/kyverno-policy.yaml
