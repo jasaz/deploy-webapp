@@ -1,6 +1,14 @@
-The following deplopyments ideally should be part of a separate Workflow. It will be moved to a different repo in the future. 
+# Overview 
 
-# STEPS FOR KYVERNO DEPLOYMENT
+- This repository contains the deployment code for a Flask application and Kubernetes manifests for deploying Ingress, Service, Deployment & Pod. 
+- The runtime is hardened making the flask container non-root, read only File system, all Capabilities dropped and Secomp profile enabled.  
+- The External Secrets operator is used to sync Google Secrets Management (GSM) with the Kubernetes secret.
+- Cosign is used to sign the conatainer image using keyless authentication using Fulcio and Rekor which are publicly deployed
+- Kyverno is used to provide admission control to verify that the images are signed and that the images are deployed only from Google Artifact Registry (GAR)  
+
+The deployment steps for Kyverno and ESO are provided below.The deployments ideally should be part of a separate Workflow and a repository. It will be moved to a different repo in the future. 
+
+## STEPS FOR KYVERNO DEPLOYMENT
 
 ### Install Kyverno (idempotent — skips if already installed)
 ```
@@ -36,7 +44,7 @@ gcloud iam service-accounts add-iam-policy-binding \
 ### 4. Annotate the K8s ServiceAccount
 ```
 kubectl annotate sa kyverno-admission-controller -n kyverno \
-  iam.gke.io/gcp-service-account=kyverno-sa@YOUR_PROJECT_ID.iam.gserviceaccount.com \
+  iam.gke.io/gcp-service-account=kyverno-sa@{PROJECT_ID}.iam.gserviceaccount.com \
 
 
   --overwrite
@@ -48,7 +56,7 @@ kubectl rollout restart deployment kyverno-admission-controller -n kyverno
 kubectl rollout status deployment kyverno-admission-controller -n kyverno --timeout=120s
 ```
 
-# STEPS FOR DEPLOYING EXTERNAL SECRETS OPERATOR (ESO)
+## STEPS FOR DEPLOYING EXTERNAL SECRETS OPERATOR (ESO)
 
 ### Install External Secrets  
 ```
